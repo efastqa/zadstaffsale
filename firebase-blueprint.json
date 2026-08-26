@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products Catalog",
+      "description": "Products available in the Staff Store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "category": { "type": "string" },
+        "brand": { "type": "string" },
+        "unit": { "type": "string" },
+        "originalPrice": { "type": "number" },
+        "staffPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "minOrderQty": { "type": "number" },
+        "maxOrderQty": { "type": "number" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "category", "originalPrice", "staffPrice", "stock", "sku"]
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Staff store employee orders and delivery statuses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeePhone": { "type": "string" },
+        "department": { "type": "string" },
+        "deliveryMode": { "type": "string" },
+        "deliveryNotes": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "savingsTotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "status": { "type": "string" },
+        "whatsappMessageSent": { "type": "boolean" },
+        "assignedDispatcher": { "type": "string" },
+        "deliveredAt": { "type": "string" },
+        "dispatchNotes": { "type": "string" }
+      },
+      "required": ["orderNumber", "employeeName", "department", "items", "grandTotal", "status"]
+    },
+    "settings": {
+      "title": "Store Settings",
+      "description": "Global store configurations like admin password and banner alerts",
+      "type": "object",
+      "properties": {
+        "adminPassword": { "type": "string" },
+        "companyPhone": { "type": "string" },
+        "isStoreOpen": { "type": "boolean" },
+        "bannerNotice": { "type": "string" }
+      }
+    }
+  }
+}

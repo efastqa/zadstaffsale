@@ -1,0 +1,6 @@
+{
+  "name": "ZAD Marketing Staff Sales Portal",
+  "description": "Exclusive staff sales portal with WhatsApp ordering, barcode scanning, order tracking, and department delivery management for ZAD Marketing & Distribution.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

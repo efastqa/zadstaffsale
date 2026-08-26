@@ -1,0 +1,572 @@
+import React, { useState } from 'react';
+import confetti from 'canvas-confetti';
+import { CartItem, Department, DeliveryMode, Order, EmployeeProfile } from '../types';
+import { DEPARTMENTS, COMPANY_INFO } from '../data/mockData';
+import { createWhatsAppOrderLink } from '../utils/whatsapp';
+import { 
+  X, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  MessageCircle, 
+  Truck, 
+  Building2, 
+  UserCheck, 
+  ShieldCheck, 
+  CheckCircle2, 
+  ArrowRight,
+  ExternalLink,
+  Printer
+} from 'lucide-react';
+
+interface CartDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  cart: CartItem[];
+  onUpdateQuantity: (productId: string, delta: number) => void;
+  onRemoveItem: (productId: string) => void;
+  onClearCart: () => void;
+  onOrderPlaced: (order: Order) => void;
+  employeeProfile: EmployeeProfile;
+  onUpdateEmployeeProfile: (profile: EmployeeProfile) => void;
+  onOpenTracker: (orderNumber: string) => void;
+  onPrintOrder: (order: Order) => void;
+}
+
+export const CartDrawer: React.FC<CartDrawerProps> = ({
+  isOpen,
+  onClose,
+  cart,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart,
+  onOrderPlaced,
+  employeeProfile,
+  onUpdateEmployeeProfile,
+  onOpenTracker,
+  onPrintOrder,
+}) => {
+  const [employeeName, setEmployeeName] = useState(employeeProfile.name || '');
+  const [employeeId, setEmployeeId] = useState(employeeProfile.id || '');
+  const [department, setDepartment] = useState<Department>(employeeProfile.department || 'Sales & Key Accounts');
+  const [phone, setPhone] = useState(employeeProfile.phone || '+974 ');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('department_delivery');
+  const [deliveryNotes, setDeliveryNotes] = useState(employeeProfile.deskLocation || '');
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+
+  // Totals calculations
+  const subtotal = cart.reduce((sum, item) => sum + item.product.staffPrice * item.quantity, 0);
+  const originalSubtotal = cart.reduce((sum, item) => sum + item.product.originalPrice * item.quantity, 0);
+  const totalSavings = originalSubtotal - subtotal;
+  const deliveryFee = 0; // Free for employees
+  const grandTotal = subtotal + deliveryFee;
+
+  const handleCheckout = (isDirectOnly = false) => {
+    if (!employeeName.trim() || !employeeId.trim() || !phone.trim()) {
+      alert('Please fill in your Employee Name, Staff ID, and WhatsApp Phone number.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Save profile for future
+    const updatedProfile: EmployeeProfile = {
+      id: employeeId.trim(),
+      name: employeeName.trim(),
+      department,
+      phone: phone.trim(),
+      deskLocation: deliveryNotes,
+    };
+    onUpdateEmployeeProfile(updatedProfile);
+
+    // Create Order Record
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const orderNumber = `ZAD-${randomNum}`;
+
+    const newOrder: Order = {
+      id: `ord-${Date.now()}`,
+      orderNumber,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      employeeName: employeeName.trim(),
+      employeeId: employeeId.trim(),
+      employeePhone: phone.trim(),
+      department,
+      deliveryMode,
+      deliveryNotes: deliveryNotes.trim(),
+      items: cart.map((item) => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        sku: item.product.sku,
+        barcode: item.product.barcode,
+        quantity: item.quantity,
+        unitPrice: item.product.staffPrice,
+        regularPrice: item.product.originalPrice,
+        totalPrice: item.product.staffPrice * item.quantity,
+        unit: item.product.unit,
+        imageUrl: item.product.imageUrl,
+      })),
+      subtotal,
+      savingsTotal: totalSavings,
+      deliveryFee: 0,
+      grandTotal,
+      status: 'confirmed',
+      whatsappMessageSent: true,
+    };
+
+    onOrderPlaced(newOrder);
+    setPlacedOrder(newOrder);
+    onClearCart();
+    setIsSubmitting(false);
+
+    // Launch celebratory confetti
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#002B66', '#059669', '#2563eb', '#f59e0b'],
+      });
+    } catch {
+      // ignore
+    }
+
+    // Open WhatsApp in new tab unless direct only
+    if (!isDirectOnly) {
+      const waLink = createWhatsAppOrderLink(newOrder);
+      window.open(waLink, '_blank');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="w-screen max-w-lg bg-white shadow-2xl flex flex-col">
+          {/* Header */}
+          <div className="px-6 py-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                <Truck className="w-4 h-4 text-slate-200" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Staff Order & Delivery</h3>
+                <p className="text-[11px] text-slate-300">
+                  Exclusive ZAD Employee Clearance
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Success Screen after placing order */}
+          {placedOrder ? (
+            <div className="flex-1 p-6 overflow-y-auto space-y-6 flex flex-col justify-center items-center text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-wider">
+                  Order Successfully Registered
+                </span>
+                <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                  Order #{placedOrder.orderNumber}
+                </h2>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Your order has been queued in the ZAD Admin Panel for department delivery arrangement.
+                </p>
+              </div>
+
+              {/* Summary Card */}
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Employee:</span>
+                  <span className="font-semibold text-slate-800">
+                    {placedOrder.employeeName} ({placedOrder.employeeId})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Department:</span>
+                  <span className="font-semibold text-slate-800 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                    {placedOrder.department}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Delivery Arrangement:</span>
+                  <span className="font-semibold text-slate-800 capitalize">
+                    {placedOrder.deliveryMode.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2 font-bold text-sm">
+                  <span>Grand Total:</span>
+                  <span className="text-slate-900">QAR {placedOrder.grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full space-y-2.5">
+                <a
+                  href={createWhatsAppOrderLink(placedOrder)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-full shadow-xs transition-all text-xs"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Open WhatsApp Order ({COMPANY_INFO.whatsappDisplay})
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </a>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      onOpenTracker(placedOrder.orderNumber);
+                      onClose();
+                      setPlacedOrder(null);
+                    }}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-full text-xs transition-colors"
+                  >
+                    Track Status Live <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => onPrintOrder(placedOrder)}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold rounded-full text-xs transition-colors"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Print Staff Slip
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPlacedOrder(null);
+                    onClose();
+                  }}
+                  className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                >
+                  Continue Shopping Staff Store
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Cart and Checkout Form */
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {cart.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <Truck className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-sm">Your Staff Cart is Empty</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                    Browse the staff sales catalog or scan carton barcodes to add subsidized items to your order.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {/* Cart Items List */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Selected Items ({cart.reduce((a, b) => a + b.quantity, 0)})
+                      </h4>
+                      <button
+                        onClick={onClearCart}
+                        className="text-xs font-medium text-slate-500 hover:text-red-600 flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Clear Cart
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {cart.map((item) => (
+                        <div
+                          key={item.product.id}
+                          className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl shadow-xs"
+                        >
+                          <img
+                            src={item.product.imageUrl}
+                            alt={item.product.name}
+                            className="w-14 h-14 object-cover rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-900 line-clamp-1">
+                              {item.product.name}
+                            </h5>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span className="font-mono">{item.product.barcode}</span>
+                              <span>• {item.product.unit}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-extrabold text-slate-900">
+                                QAR {(item.product.staffPrice * item.quantity).toFixed(2)}
+                              </span>
+                              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">
+                                Save QAR {((item.product.originalPrice - item.product.staffPrice) * item.quantity).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 border border-slate-200 rounded-full bg-slate-50 p-0.5">
+                            <button
+                              onClick={() => onUpdateQuantity(item.product.id, -1)}
+                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 transition-colors"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-6 text-center text-xs font-bold text-slate-800">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => onUpdateQuantity(item.product.id, 1)}
+                              disabled={item.quantity >= item.product.stock}
+                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 disabled:opacity-30 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => onRemoveItem(item.product.id)}
+                            className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Employee Verification Form */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                      <UserCheck className="w-4 h-4 text-slate-700" />
+                      Employee Verification Details
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={employeeName}
+                          onChange={(e) => setEmployeeName(e.target.value)}
+                          placeholder="e.g. Mohamed Al-Kuwari"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Staff ID *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={employeeId}
+                          onChange={(e) => setEmployeeId(e.target.value)}
+                          placeholder="e.g. EMP-0412"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Department (For Delivery Grouping) *
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <select
+                          value={department}
+                          onChange={(e) => setDepartment(e.target.value as Department)}
+                          className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                        >
+                          {DEPARTMENTS.map((dept) => (
+                            <option key={dept} value={dept}>
+                              {dept}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        WhatsApp Contact Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+974 5512 3456"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Delivery Arrangement Selection */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Select Delivery Method:
+                    </label>
+
+                    <div className="space-y-2">
+                      <label
+                        className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                          deliveryMode === 'department_delivery'
+                            ? 'bg-slate-50 border-slate-900 text-slate-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delivery_mode"
+                          checked={deliveryMode === 'department_delivery'}
+                          onChange={() => setDeliveryMode('department_delivery')}
+                          className="mt-1 accent-slate-900"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">
+                            🏢 Deliver to Department Hub (Recommended)
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Batch delivery to your department drop-off zone.
+                          </div>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                          deliveryMode === 'central_warehouse_pickup'
+                            ? 'bg-slate-50 border-slate-900 text-slate-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delivery_mode"
+                          checked={deliveryMode === 'central_warehouse_pickup'}
+                          onChange={() => setDeliveryMode('central_warehouse_pickup')}
+                          className="mt-1 accent-slate-900"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">
+                            🏭 Central Warehouse Staff Counter Pickup
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Industrial Area Gate 3 - Staff Collection Point.
+                          </div>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                          deliveryMode === 'individual_desk'
+                            ? 'bg-slate-50 border-slate-900 text-slate-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delivery_mode"
+                          checked={deliveryMode === 'individual_desk'}
+                          onChange={() => setDeliveryMode('individual_desk')}
+                          className="mt-1 accent-slate-900"
+                        />
+                        <div>
+                          <div className="text-xs font-bold">
+                            📍 Direct Desk Handover
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Personal handover directly to your office workstation desk.
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Specific Desk Location / Delivery Instructions:
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryNotes}
+                        onChange={(e) => setDeliveryNotes(e.target.value)}
+                        placeholder="e.g. Building A, Floor 2, Desk #S-12"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Savings & Guarantee Banner */}
+                  <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <div className="text-xs text-emerald-800">
+                      <span className="font-bold">Exclusive Employee Pricing: </span>
+                      You are saving <strong className="font-bold text-emerald-700">QAR {totalSavings.toFixed(2)}</strong> on this order!
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Order Footer Actions */}
+              {cart.length > 0 && (
+                <div className="p-6 bg-slate-50 border-t border-slate-200 space-y-3.5">
+                  {/* Totals */}
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Regular Retail Value:</span>
+                      <span className="line-through">QAR {originalSubtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-600 font-bold">
+                      <span>Staff Subsidy Savings:</span>
+                      <span>- QAR {totalSavings.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Internal Delivery:</span>
+                      <span className="text-emerald-600 font-semibold">FREE (Staff Benefit)</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-extrabold text-base border-t border-slate-200 pt-2">
+                      <span>Staff Total:</span>
+                      <span className="text-slate-900">QAR {grandTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Order Button */}
+                  <button
+                    onClick={() => handleCheckout(false)}
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-full shadow-xs transition-all text-xs active:scale-98 disabled:opacity-50"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Place Order via WhatsApp ({COMPANY_INFO.whatsappDisplay})
+                  </button>
+
+                  <button
+                    onClick={() => handleCheckout(true)}
+                    disabled={isSubmitting}
+                    className="w-full py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-full transition-colors border border-dashed border-slate-300"
+                  >
+                    Register in Admin System Only (Without WhatsApp)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
