@@ -21,7 +21,9 @@ import {
   ArrowDownRight,
   ArrowUpDown,
   Tag,
-  Percent
+  Percent,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 
 interface AdminSummaryDashboardProps {
@@ -29,6 +31,7 @@ interface AdminSummaryDashboardProps {
   products: Product[];
   onSelectDepartment?: (dept: Department) => void;
   onNavigateTab?: (tab: 'orders' | 'delivery_matrix' | 'products') => void;
+  onOpenEBSExport?: () => void;
 }
 
 type TimeframeOption = 'all' | 'this_month' | 'last_month' | 'last_30_days';
@@ -37,7 +40,8 @@ export const AdminSummaryDashboard: React.FC<AdminSummaryDashboardProps> = ({
   orders,
   products,
   onSelectDepartment,
-  onNavigateTab
+  onNavigateTab,
+  onOpenEBSExport
 }) => {
   const [timeframe, setTimeframe] = useState<TimeframeOption>('all');
   const [deptSortBy, setDeptSortBy] = useState<'revenue' | 'orders'>('revenue');
@@ -425,6 +429,43 @@ export const AdminSummaryDashboard: React.FC<AdminSummaryDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ERP / ORACLE EBS EXPORT ACTION BANNER */}
+      {onOpenEBSExport && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-sm border border-blue-800/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
+              <FileSpreadsheet className="w-6 h-6 text-blue-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-blue-500/30 text-blue-200 border border-blue-400/30 rounded-md">
+                  Finance & Logistics ERP
+                </span>
+                <span className="text-xs text-blue-300">
+                  {orders.length} orders ({orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0)} items)
+                </span>
+              </div>
+              <h3 className="text-base font-extrabold text-white mt-1">
+                Collect & Export Employee Orders for Oracle EBS / Excel
+              </h3>
+              <p className="text-xs text-blue-200/80 max-w-xl mt-0.5">
+                Generate clean, formatted spreadsheets with <strong>Item Code (SKU)</strong>, <strong>Description</strong>, <strong>Quantity</strong>, Subsidized Rates, and <strong>Employee Details (ID, Name, Dept)</strong> ready for batch PO/SO processing.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+            <button
+              onClick={onOpenEBSExport}
+              className="w-full md:w-auto px-5 py-2.5 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black text-xs rounded-full transition-all shadow-md flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>Open EBS Export Engine</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* SECTION 1: MONTHLY SALES VOLUME & TRENDS */}
       <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">

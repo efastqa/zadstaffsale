@@ -77,14 +77,12 @@ export function createSingleProductWhatsAppLink(
   department: string = 'Staff'
 ): string {
   const rawNumber = COMPANY_INFO.whatsappNumber.replace(/[^0-9]/g, '');
-  const savings = (product.originalPrice - product.staffPrice).toFixed(2);
-  
   const text = `🛍️ *ZAD STAFF SALE INQUIRY / ORDER*
 ━━━━━━━━━━━━━━━━━━━━━
 *Product:* ${product.name}
 *Barcode:* \`${product.barcode}\`
 *SKU:* ${product.sku}
-*Staff Price:* QAR ${product.staffPrice.toFixed(2)} (Regular QAR ${product.originalPrice.toFixed(2)} - Save QAR ${savings})
+*Staff Price:* QAR ${product.staffPrice.toFixed(2)}
 *Unit:* ${product.unit}
 
 👤 *Staff Info:*

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
 import { CartItem, Department, DeliveryMode, Order, EmployeeProfile } from '../types';
-import { DEPARTMENTS, COMPANY_INFO } from '../data/mockData';
+import { DEPARTMENTS, COMPANY_INFO, STAFF_ORDER_QUOTA } from '../data/mockData';
 import { createWhatsAppOrderLink } from '../utils/whatsapp';
 import { 
   X, 
@@ -16,7 +16,10 @@ import {
   CheckCircle2, 
   ArrowRight,
   ExternalLink,
-  Printer
+  Printer,
+  AlertTriangle,
+  ShieldAlert,
+  Ban
 } from 'lucide-react';
 
 interface CartDrawerProps {
@@ -56,16 +59,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
-  // Totals calculations
+  // Totals calculations & Quota calculations
+  const MAX_EMPLOYEE_QUOTA = STAFF_ORDER_QUOTA || 200;
   const subtotal = cart.reduce((sum, item) => sum + item.product.staffPrice * item.quantity, 0);
   const originalSubtotal = cart.reduce((sum, item) => sum + item.product.originalPrice * item.quantity, 0);
   const totalSavings = originalSubtotal - subtotal;
   const deliveryFee = 0; // Free for employees
   const grandTotal = subtotal + deliveryFee;
 
+  const isQuotaExceeded = grandTotal > MAX_EMPLOYEE_QUOTA;
+  const quotaRemaining = Math.max(0, MAX_EMPLOYEE_QUOTA - grandTotal);
+  const quotaOver = Math.max(0, grandTotal - MAX_EMPLOYEE_QUOTA);
+  const quotaPercent = Math.min(100, (grandTotal / MAX_EMPLOYEE_QUOTA) * 100);
+
+  const hasSoldOutItems = cart.some((item) => !item.product.stock || item.product.stock <= 0);
+
   const handleCheckout = (isDirectOnly = false) => {
     if (!employeeName.trim() || !employeeId.trim() || !phone.trim()) {
       alert('Please fill in your Employee Name, Staff ID, and WhatsApp Phone number.');
+      return;
+    }
+
+    if (isQuotaExceeded) {
+      alert(
+        `⚠️ Order Quota Exceeded: Your order total is QAR ${grandTotal.toFixed(2)}, which exceeds the one-time employee quota limit of QAR ${MAX_EMPLOYEE_QUOTA.toFixed(2)} by QAR ${quotaOver.toFixed(2)}. Please reduce your items to proceed.`
+      );
+      return;
+    }
+
+    if (hasSoldOutItems) {
+      alert('⚠️ One or more items in your cart are Sold Out. Please remove them to proceed with checkout.');
       return;
     }
 
@@ -270,7 +293,64 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  {/* ONE-TIME EMPLOYEE QUOTA PROGRESS BAR & STATUS */}
+                  <div className={`p-4 rounded-2xl border transition-all ${
+                    isQuotaExceeded 
+                      ? 'bg-rose-50 border-rose-300 text-rose-900 shadow-sm' 
+                      : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {isQuotaExceeded ? (
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                        ) : (
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold truncate">
+                          One-Time Employee Quota (حد الموظف)
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs font-black ${
+                          isQuotaExceeded ? 'text-rose-700' : 'text-slate-900'
+                        }`}>
+                          QAR {grandTotal.toFixed(2)} / {MAX_EMPLOYEE_QUOTA}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-2">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          isQuotaExceeded 
+                            ? 'bg-rose-600' 
+                            : quotaPercent > 80 
+                            ? 'bg-amber-500' 
+                            : 'bg-emerald-600'
+                        }`}
+                        style={{ width: `${Math.min(100, quotaPercent)}%` }}
+                      />
+                    </div>
+
+                    {/* Subtext info */}
+                    <div className="text-[11px] flex items-center justify-between">
+                      {isQuotaExceeded ? (
+                        <span className="text-rose-700 font-bold">
+                          ⚠️ Exceeds QAR {MAX_EMPLOYEE_QUOTA} limit by QAR {quotaOver.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">
+                          <strong>QAR {quotaRemaining.toFixed(2)}</strong> remaining under your staff quota
+                        </span>
+                      )}
+                      <span className="text-slate-400 font-mono text-[10px]">
+                        Max QAR {MAX_EMPLOYEE_QUOTA}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Cart Items List */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -286,61 +366,89 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     </div>
 
                     <div className="space-y-3">
-                      {cart.map((item) => (
-                        <div
-                          key={item.product.id}
-                          className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl shadow-xs"
-                        >
-                          <img
-                            src={item.product.imageUrl}
-                            alt={item.product.name}
-                            className="w-14 h-14 object-cover rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <h5 className="text-xs font-bold text-slate-900 line-clamp-1">
-                              {item.product.name}
-                            </h5>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                              <span className="font-mono">{item.product.barcode}</span>
-                              <span>• {item.product.unit}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-extrabold text-slate-900">
-                                QAR {(item.product.staffPrice * item.quantity).toFixed(2)}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">
-                                Save QAR {((item.product.originalPrice - item.product.staffPrice) * item.quantity).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
+                      {cart.map((item) => {
+                        const isItemSoldOut = !item.product.stock || item.product.stock <= 0;
+                        const isOverStock = item.quantity > item.product.stock;
 
-                          <div className="flex items-center gap-1 border border-slate-200 rounded-full bg-slate-50 p-0.5">
-                            <button
-                              onClick={() => onUpdateQuantity(item.product.id, -1)}
-                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 transition-colors"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-6 text-center text-xs font-bold text-slate-800">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => onUpdateQuantity(item.product.id, 1)}
-                              disabled={item.quantity >= item.product.stock}
-                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 disabled:opacity-30 transition-colors"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => onRemoveItem(item.product.id)}
-                            className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                        return (
+                          <div
+                            key={item.product.id}
+                            className={`flex items-center gap-3 p-3 bg-white border rounded-2xl shadow-xs transition-colors ${
+                              isItemSoldOut 
+                                ? 'border-rose-200 bg-rose-50/40' 
+                                : 'border-slate-200'
+                            }`}
                           >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="relative w-14 h-14 rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                              <img
+                                src={item.product.imageUrl}
+                                alt={item.product.name}
+                                className={`w-full h-full object-cover ${
+                                  isItemSoldOut ? 'grayscale opacity-50' : ''
+                                }`}
+                              />
+                              {isItemSoldOut && (
+                                <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center p-0.5">
+                                  <span className="text-[8px] font-black text-white bg-rose-600 px-1 py-0.2 rounded uppercase">
+                                    Sold Out
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h5 className="text-xs font-bold text-slate-900 line-clamp-1">
+                                {item.product.name}
+                              </h5>
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                                <span className="font-mono">{item.product.barcode}</span>
+                                <span>• {item.product.unit}</span>
+                                {isItemSoldOut && (
+                                  <span className="text-rose-700 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 text-[10px]">
+                                    Sold Out
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs font-extrabold text-slate-900">
+                                  QAR {(item.product.staffPrice * item.quantity).toFixed(2)}
+                                </span>
+                                {isOverStock && (
+                                  <span className="text-[10px] text-rose-600 font-bold">
+                                    (Only {item.product.stock} available)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 border border-slate-200 rounded-full bg-slate-50 p-0.5">
+                              <button
+                                onClick={() => onUpdateQuantity(item.product.id, -1)}
+                                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 transition-colors"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-6 text-center text-xs font-bold text-slate-800">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => onUpdateQuantity(item.product.id, 1)}
+                                disabled={isItemSoldOut || item.quantity >= item.product.stock}
+                                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-white text-slate-600 disabled:opacity-30 transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => onRemoveItem(item.product.id)}
+                              className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -544,20 +652,51 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     </div>
                   </div>
 
+                  {/* Quota Exceeded Warning Banner */}
+                  {isQuotaExceeded && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="font-bold">Quota Limit Exceeded:</strong> One-time employee order is capped at <strong>QAR {MAX_EMPLOYEE_QUOTA}.00</strong>. Your cart is <strong>QAR {grandTotal.toFixed(2)}</strong> (QAR {quotaOver.toFixed(2)} over limit). Please decrease quantity or remove items to place order.
+                      </div>
+                    </div>
+                  )}
+
+                  {hasSoldOutItems && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
+                      <Ban className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="font-bold">Sold Out Items in Cart:</strong> One or more items in your cart are no longer in stock. Please remove sold out items to proceed.
+                      </div>
+                    </div>
+                  )}
+
                   {/* WhatsApp Order Button */}
                   <button
                     onClick={() => handleCheckout(false)}
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-full shadow-xs transition-all text-xs active:scale-98 disabled:opacity-50"
+                    disabled={isSubmitting || isQuotaExceeded || hasSoldOutItems}
+                    className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-white font-semibold rounded-full shadow-xs transition-all text-xs ${
+                      isQuotaExceeded || hasSoldOutItems
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                        : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98'
+                    }`}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Place Order via WhatsApp ({COMPANY_INFO.whatsappDisplay})
+                    {isQuotaExceeded 
+                      ? `Exceeds QAR ${MAX_EMPLOYEE_QUOTA} Staff Quota` 
+                      : hasSoldOutItems
+                      ? 'Remove Sold Out Items'
+                      : `Place Order via WhatsApp (${COMPANY_INFO.whatsappDisplay})`}
                   </button>
 
                   <button
                     onClick={() => handleCheckout(true)}
-                    disabled={isSubmitting}
-                    className="w-full py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-full transition-colors border border-dashed border-slate-300"
+                    disabled={isSubmitting || isQuotaExceeded || hasSoldOutItems}
+                    className={`w-full py-2 text-xs font-medium rounded-full transition-colors border border-dashed ${
+                      isQuotaExceeded || hasSoldOutItems
+                        ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'border-slate-300 text-slate-600 hover:text-slate-900'
+                    }`}
                   >
                     Register in Admin System Only (Without WhatsApp)
                   </button>

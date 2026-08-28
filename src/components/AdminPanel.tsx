@@ -5,7 +5,9 @@ import { FMCG_PRESETS, CURATED_IMAGES, generateEAN13Barcode } from '../data/fmcg
 import { getStoredAdminPassword, saveStoredAdminPassword, saveStoredProducts } from '../utils/storage';
 import { createSingleProductWhatsAppLink } from '../utils/whatsapp';
 import { BulkProductModal } from './BulkProductModal';
+import { EBSExportModal } from './EBSExportModal';
 import { AdminSummaryDashboard } from './AdminSummaryDashboard';
+import { compressImageFile } from '../utils/imageCompressor';
 import { 
   Building2, 
   Package, 
@@ -19,6 +21,7 @@ import {
   Edit3, 
   Printer, 
   Download, 
+  FileSpreadsheet,
   MessageCircle, 
   ExternalLink,
   DollarSign,
@@ -98,10 +101,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Product Edit Modal state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editingProduct) {
+      try {
+        const compressedDataUrl = await compressImageFile(file, 600, 0.75);
+        setEditingProduct({
+          ...editingProduct,
+          imageUrl: compressedDataUrl,
+        });
+      } catch (err) {
+        console.error('Error compressing image:', err);
+      }
+    }
+  };
 
   // Bulk Product Importer state
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkSuccessCount, setBulkSuccessCount] = useState<number | null>(null);
+
+  // Oracle EBS / Excel Export state
+  const [isEBSModalOpen, setIsEBSModalOpen] = useState(false);
 
   // Recently updated/added item banner state
   const [lastUpdatedProduct, setLastUpdatedProduct] = useState<{ product: Product; action: 'added' | 'updated' } | null>(null);
@@ -358,10 +380,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={exportCSV}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/20 rounded-full text-xs font-semibold transition-colors"
+              onClick={() => setIsEBSModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs transition-all shadow-xs border border-blue-400/40"
+              title="Export all orders with Item Codes, Descriptions, Qty, and Employee Details for Oracle EBS / Excel"
             >
-              <Download className="w-4 h-4" /> Export CSV
+              <FileSpreadsheet className="w-4 h-4 text-white" />
+              <span>EBS / Excel Export</span>
             </button>
 
             <button
@@ -603,6 +627,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           orders={orders}
           products={products}
           onNavigateTab={(tab) => setActiveTab(tab)}
+          onOpenEBSExport={() => setIsEBSModalOpen(true)}
         />
       )}
 
@@ -683,6 +708,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEBSModalOpen(true)}
+                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold px-3 py-1.5 rounded-xl text-xs transition-colors"
+                title="Export filtered orders for Oracle EBS"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-blue-700" />
+                <span>Export EBS Sheet</span>
+              </button>
             </div>
           </div>
 
@@ -1722,44 +1757,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Curated FMCG Images Picker */}
+                {/* Single Product Image (Upload or URL) */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                    <span>Product Image URL</span>
-                    <span className="text-[10px] text-slate-400">Click photo below to auto-fill</span>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Product Image (1 Photo)
                   </label>
-                  <input
-                    type="url"
-                    value={editingProduct.imageUrl}
-                    onChange={(e) =>
-                      setEditingProduct({ ...editingProduct, imageUrl: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-none text-xs"
-                  />
+                  
+                  <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <img
+                      src={editingProduct.imageUrl || CURATED_IMAGES[0].url}
+                      alt="Preview"
+                      className="w-14 h-14 object-cover rounded-lg border border-slate-200 bg-white shrink-0 shadow-2xs"
+                    />
 
-                  {/* Photo chips */}
-                  <div className="flex gap-1.5 overflow-x-auto pt-2 pb-1">
-                    {CURATED_IMAGES.map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() =>
-                          setEditingProduct({ ...editingProduct, imageUrl: img.url })
-                        }
-                        className={`p-1 rounded-lg border shrink-0 transition-all ${
-                          editingProduct.imageUrl === img.url
-                            ? 'ring-2 ring-slate-900 border-slate-900'
-                            : 'border-slate-200 hover:border-slate-400'
-                        }`}
-                        title={img.label}
-                      >
-                        <img
-                          src={img.url}
-                          alt={img.label}
-                          className="w-10 h-10 object-cover rounded"
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
                         />
-                      </button>
-                    ))}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs"
+                        >
+                          <Upload className="w-3.5 h-3.5" /> Upload Photo
+                        </button>
+                        <span className="text-[11px] text-slate-500">or enter image web URL below:</span>
+                      </div>
+
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/... or direct image link"
+                        value={editingProduct.imageUrl}
+                        onChange={(e) =>
+                          setEditingProduct({ ...editingProduct, imageUrl: e.target.value })
+                        }
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:outline-none text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1921,6 +1960,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             setBulkSuccessCount(null);
           }, 6000);
         }}
+      />
+
+      {/* Oracle EBS / Excel Orders Export Modal */}
+      <EBSExportModal
+        isOpen={isEBSModalOpen}
+        onClose={() => setIsEBSModalOpen(false)}
+        orders={orders}
       />
     </div>
   );

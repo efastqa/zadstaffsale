@@ -147,12 +147,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart Drawer Trigger Button */}
             <button
               onClick={onOpenCart}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs active:scale-98"
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-xs transition-all shadow-xs active:scale-98 ${
+                cartSubtotal > 200
+                  ? 'bg-rose-700 hover:bg-rose-800 text-white'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}
             >
               <div className="relative">
                 <ShoppingBag className="w-4 h-4" />
                 {totalCartCount > 0 && (
-                  <span className="absolute -top-2 -right-2.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                  <span className={`absolute -top-2 -right-2.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center border border-white ${
+                    cartSubtotal > 200 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-500 text-white'
+                  }`}>
                     {totalCartCount}
                   </span>
                 )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Order, Department } from '../types';
 import { COMPANY_INFO } from '../data/mockData';
+import { Logo } from './Logo';
 import { X, Printer, CheckCircle, FileText, Truck } from 'lucide-react';
 
 interface PrintSlipModalProps {
@@ -61,14 +62,8 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
             <div className="space-y-6">
               {/* Header */}
               <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
-                <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                    ZAD MARKETING & DISTRIBUTION
-                  </h1>
-                  <p className="text-sm font-bold text-blue-900">زاد للتسويق والتوزيع</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    INTERNAL LOGISTICS • DEPARTMENT CONSOLIDATED DISPATCH MANIFEST
-                  </p>
+                <div className="flex items-center gap-4">
+                  <Logo size="md" showSubtitle={false} />
                 </div>
                 <div className="text-right">
                   <span className="inline-block px-3 py-1 bg-slate-900 text-white text-xs font-bold rounded">
@@ -168,14 +163,8 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
             <div className="space-y-6">
               {/* Header */}
               <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
-                <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                    ZAD MARKETING & DISTRIBUTION
-                  </h1>
-                  <p className="text-sm font-bold text-blue-900">زاد للتسويق والتوزيع</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Exclusive Staff Sales Program • WhatsApp Helpline: {COMPANY_INFO.whatsappDisplay}
-                  </p>
+                <div className="flex items-center gap-4">
+                  <Logo size="md" showSubtitle={false} />
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-black text-slate-900 font-mono">

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Product } from '../types';
 import { CURATED_IMAGES, generateEAN13Barcode } from '../data/fmcgPresets';
+import { compressImageFile } from '../utils/imageCompressor';
 import { 
   X, 
   Upload, 
@@ -52,38 +53,18 @@ export const BulkProductModal: React.FC<BulkProductModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvFileRef = useRef<HTMLInputElement>(null);
 
-  // Initial template rows with Item code (SKU), Name, Category, Unit pcs, Staff Price, Stock Qty, Image
+  // Initial template rows
   const [rows, setRows] = useState<BulkProductRow[]>([
     {
       id: `bulk-${Date.now()}-1`,
       sku: 'ZAD-1001',
-      name: 'San Pellegrino Sparkling Mineral Water',
+      name: '',
       category: 'Beverages & Juices',
-      unit: 'Carton (24 pcs)',
-      staffPrice: 65,
-      stock: 40,
+      unit: 'pcs',
+      staffPrice: 0,
+      stock: 10,
       imageUrl: CURATED_IMAGES[0].url,
     },
-    {
-      id: `bulk-${Date.now()}-2`,
-      sku: 'ZAD-1002',
-      name: 'Nutella Hazelnut Cocoa Spread 750g',
-      category: 'Chocolates & Confectionery',
-      unit: 'Box (6 pcs)',
-      staffPrice: 85,
-      stock: 35,
-      imageUrl: CURATED_IMAGES[4].url,
-    },
-    {
-      id: `bulk-${Date.now()}-3`,
-      sku: 'ZAD-1003',
-      name: 'Barilla Spaghetti No. 5 500g',
-      category: 'Groceries & Pantry',
-      unit: 'Carton (24 pcs)',
-      staffPrice: 75,
-      stock: 50,
-      imageUrl: CURATED_IMAGES[8].url,
-    }
   ]);
 
   const [csvText, setCsvText] = useState('');
@@ -125,17 +106,16 @@ export const BulkProductModal: React.FC<BulkProductModalProps> = ({
   };
 
   // Handle Local Image File Upload for a row
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>, rowId: string) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, rowId: string) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          handleUpdateRow(rowId, 'imageUrl', reader.result);
-          setImagePickerRowId(null);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedDataUrl = await compressImageFile(file, 600, 0.75);
+        handleUpdateRow(rowId, 'imageUrl', compressedDataUrl);
+        setImagePickerRowId(null);
+      } catch (err) {
+        console.error('Error compressing image:', err);
+      }
     }
   };
 
@@ -808,78 +788,66 @@ export const BulkProductModal: React.FC<BulkProductModalProps> = ({
               </button>
             </div>
 
-            {/* Curated FMCG Images Grid */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-600 block mb-2">
-                Curated Category Photos:
-              </label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1">
-                {CURATED_IMAGES.map((img, idx) => (
+            {/* Custom URL or Device Upload */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                {rows.find((r) => r.id === imagePickerRowId)?.imageUrl ? (
+                  <img
+                    src={rows.find((r) => r.id === imagePickerRowId)?.imageUrl}
+                    alt="Current product photo"
+                    className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white shadow-2xs shrink-0"
+                  />
+                ) : null}
+                <div className="flex-1 space-y-2">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    Product Image (1 Photo)
+                  </label>
+                  
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={(e) => handleImageFileUpload(e, imagePickerRowId)}
+                    className="hidden"
+                  />
                   <button
-                    key={idx}
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload Photo from Device
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                  Or enter direct Image Web URL:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={customImageUrlInput}
+                    onChange={(e) => setCustomImageUrlInput(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                  <button
                     type="button"
                     onClick={() => {
-                      handleUpdateRow(imagePickerRowId, 'imageUrl', img.url);
-                      setImagePickerRowId(null);
+                      if (customImageUrlInput.trim()) {
+                        handleUpdateRow(imagePickerRowId, 'imageUrl', customImageUrlInput.trim());
+                        setCustomImageUrlInput('');
+                        setImagePickerRowId(null);
+                      }
                     }}
-                    className="group flex flex-col items-center gap-1 p-1 rounded-xl border border-slate-200 hover:border-slate-900 hover:shadow-xs transition-all text-left bg-slate-50"
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-colors shadow-2xs"
                   >
-                    <img
-                      src={img.url}
-                      alt={img.label}
-                      className="w-full h-16 object-cover rounded-lg group-hover:scale-102 transition-transform"
-                    />
-                    <span className="text-[9px] font-semibold text-slate-700 truncate w-full text-center">
-                      {img.label}
-                    </span>
+                    Apply URL
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
-
-            {/* Custom URL or Device Upload */}
-            <div className="pt-2 border-t border-slate-100 space-y-2">
-              <label className="text-[11px] font-bold text-slate-600 block">
-                Or Use Custom Image URL / Device Photo:
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={customImageUrlInput}
-                  onChange={(e) => setCustomImageUrlInput(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (customImageUrlInput.trim()) {
-                      handleUpdateRow(imagePickerRowId, 'imageUrl', customImageUrlInput.trim());
-                      setCustomImageUrlInput('');
-                      setImagePickerRowId(null);
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                onChange={(e) => handleImageFileUpload(e, imagePickerRowId)}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                Upload Photo from Device
-              </button>
             </div>
           </div>
         </div>

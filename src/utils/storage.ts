@@ -62,14 +62,13 @@ export function saveStoredAdminAuth(isAuthenticated: boolean, remember = false) 
 export function getStoredProducts(): Product[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    if (data) {
+    if (data !== null) {
       return JSON.parse(data);
     }
   } catch (e) {
     console.error('Error reading products from storage', e);
   }
-  saveStoredProducts(INITIAL_PRODUCTS);
-  return INITIAL_PRODUCTS;
+  return [];
 }
 
 export function saveStoredProducts(products: Product[]) {

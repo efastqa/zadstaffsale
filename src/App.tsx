@@ -51,7 +51,10 @@ import {
   Flame,
   ArrowUpDown,
   Lock,
-  Truck
+  Truck,
+  LayoutGrid,
+  Grid2X2,
+  List
 } from 'lucide-react';
 
 export default function App() {
@@ -62,6 +65,7 @@ export default function App() {
   const [employeeProfile, setEmployeeProfile] = useState<EmployeeProfile>(getStoredEmployee);
   const [isCloudConnected, setIsCloudConnected] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'large'>('grid');
 
   // Real-time Firestore Cloud Subscriptions
   useEffect(() => {
@@ -69,17 +73,34 @@ export default function App() {
     let unsubscribeOrders: (() => void) | undefined;
 
     try {
-      unsubscribeProducts = subscribeToProducts((cloudProducts) => {
-        setIsCloudConnected(true);
-        if (cloudProducts.length > 0) {
-          setProducts(cloudProducts);
+      unsubscribeProducts = subscribeToProducts(
+        (cloudProducts) => {
+          setIsCloudConnected(true);
+          if (cloudProducts.length > 0) {
+            setProducts(cloudProducts);
+            saveStoredProducts(cloudProducts);
+          } else {
+            setProducts([]);
+            saveStoredProducts([]);
+          }
+        },
+        (error) => {
+          console.warn('Firestore products offline or permission issue, using local storage:', error);
+          setIsCloudConnected(false);
         }
-      });
+      );
 
-      unsubscribeOrders = subscribeToOrders((cloudOrders) => {
-        setIsCloudConnected(true);
-        setOrders(cloudOrders);
-      });
+      unsubscribeOrders = subscribeToOrders(
+        (cloudOrders) => {
+          setIsCloudConnected(true);
+          setOrders(cloudOrders);
+          saveStoredOrders(cloudOrders);
+        },
+        (error) => {
+          console.warn('Firestore orders offline, using local storage:', error);
+          setIsCloudConnected(false);
+        }
+      );
     } catch (e) {
       console.warn('Using local fallback for database:', e);
       setIsCloudConnected(false);
@@ -211,6 +232,10 @@ export default function App() {
 
   // Cart Handlers
   const handleAddToCart = (product: Product, quantity = 1) => {
+    if (!product.stock || product.stock <= 0) {
+      alert(`"${product.name}" is currently Sold Out.`);
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -516,7 +541,7 @@ export default function App() {
           />
         ) : (
           /* EMPLOYEE STAFF SALES STORE */
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6">
             {/* Banner & Hero Highlights */}
             <StaffSaleBanner
               onOpenTracking={() => setIsTrackingOpen(true)}
@@ -564,7 +589,7 @@ export default function App() {
             )}
 
             {/* Catalog Filter Controls Bar */}
-            <div id="staff-catalog-section" className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
+            <div id="staff-catalog-section" className="bg-white rounded-2xl border border-slate-200 shadow-xs p-3 sm:p-5 space-y-2.5 sm:space-y-4">
               {/* Search & Clearance Switch */}
               <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
                 {/* Search input */}
@@ -641,7 +666,7 @@ export default function App() {
 
             {/* Products Grid & Status */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-bold text-slate-900">
                     Available Staff Items
@@ -651,13 +676,61 @@ export default function App() {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => setIsScannerOpen(true)}
-                  className="text-xs font-semibold text-slate-900 hover:text-slate-700 flex items-center gap-1.5"
-                >
-                  <ScanLine className="w-4 h-4 text-slate-700" />
-                  Scan Barcode on Carton
-                </button>
+                <div className="flex items-center justify-between sm:justify-end gap-2">
+                  {/* Phone View Mode Switcher */}
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        viewMode === 'grid'
+                          ? 'bg-white text-slate-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="2-Column Compact Grid (Small Photos)"
+                    >
+                      <Grid2X2 className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Grid</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        viewMode === 'list'
+                          ? 'bg-white text-slate-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Compact List View (Fast Ordering)"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">List</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('large')}
+                      className={`hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        viewMode === 'large'
+                          ? 'bg-white text-slate-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Spacious Single Cards"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Cards</span>
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setIsScannerOpen(true)}
+                    className="text-xs font-semibold text-slate-900 hover:text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5"
+                  >
+                    <ScanLine className="w-4 h-4 text-slate-700" />
+                    <span className="hidden sm:inline">Scan Barcode</span>
+                    <span className="sm:hidden">Scan</span>
+                  </button>
+                </div>
               </div>
 
               {products.length === 0 ? (
@@ -705,7 +778,13 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className={
+                  viewMode === 'list'
+                    ? 'flex flex-col gap-2.5'
+                    : viewMode === 'large'
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5'
+                    : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5'
+                }>
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -716,6 +795,7 @@ export default function App() {
                       department={employeeProfile.department}
                       onOpenBarcodeDetails={(p) => setSelectedBarcodeProduct(p)}
                       isHighlighted={product.id === highlightedProductId}
+                      viewMode={viewMode}
                     />
                   ))}
                 </div>

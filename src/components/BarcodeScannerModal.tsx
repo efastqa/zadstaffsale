@@ -14,7 +14,8 @@ import {
   MessageCircle, 
   Sparkles,
   AlertCircle,
-  Barcode
+  Barcode,
+  Ban
 } from 'lucide-react';
 
 interface BarcodeScannerModalProps {
@@ -294,56 +295,72 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   <h4 className="font-bold text-slate-900 text-sm mt-1 leading-snug">
                     {scannedProduct.name}
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {scannedProduct.unit} • Stock: {scannedProduct.stock} left
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                    <span>{scannedProduct.unit}</span>
+                    <span>•</span>
+                    {scannedProduct.stock <= 0 ? (
+                      <span className="text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                        Sold Out • نفدت الكمية
+                      </span>
+                    ) : (
+                      <span>Stock: <strong className="text-slate-700">{scannedProduct.stock}</strong> left</span>
+                    )}
                   </p>
 
                   <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-lg font-black text-slate-900">
-                      QAR {scannedProduct.staffPrice.toFixed(2)}
-                    </span>
-                    <span className="text-xs text-slate-400 line-through">
-                      QAR {scannedProduct.originalPrice.toFixed(2)}
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
-                      Save QAR {(scannedProduct.originalPrice - scannedProduct.staffPrice).toFixed(2)}
-                    </span>
+                    <div>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Staff Price</span>
+                      <span className="text-lg font-black text-slate-900">
+                        QAR {scannedProduct.staffPrice.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-200">
-                    <button
-                      onClick={() => handleAddToCart(scannedProduct)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white transition-all shadow-xs ${
-                        addedAnimation
-                          ? 'bg-emerald-600 scale-105'
-                          : 'bg-slate-900 hover:bg-slate-800'
-                      }`}
-                    >
-                      {addedAnimation ? (
-                        <>
-                          <Check className="w-4 h-4" /> Added to Cart!
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4" /> Add to Staff Cart
-                        </>
-                      )}
-                    </button>
+                    {scannedProduct.stock <= 0 ? (
+                      <button
+                        disabled
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                      >
+                        <Ban className="w-4 h-4" /> Sold Out
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleAddToCart(scannedProduct)}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white transition-all shadow-xs ${
+                            addedAnimation
+                              ? 'bg-emerald-600 scale-105'
+                              : 'bg-slate-900 hover:bg-slate-800'
+                          }`}
+                        >
+                          {addedAnimation ? (
+                            <>
+                              <Check className="w-4 h-4" /> Added to Cart!
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" /> Add to Staff Cart
+                            </>
+                          )}
+                        </button>
 
-                    <a
-                      href={createSingleProductWhatsAppLink(
-                        scannedProduct,
-                        currentEmployeeName,
-                        currentEmployeeId,
-                        currentDepartment
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-semibold transition-colors shadow-xs"
-                    >
-                      <MessageCircle className="w-4 h-4" /> 1-Click WhatsApp Order
-                      <ExternalLink className="w-3 h-3 opacity-70" />
-                    </a>
+                        <a
+                          href={createSingleProductWhatsAppLink(
+                            scannedProduct,
+                            currentEmployeeName,
+                            currentEmployeeId,
+                            currentDepartment
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-semibold transition-colors shadow-xs"
+                        >
+                          <MessageCircle className="w-4 h-4" /> 1-Click WhatsApp Order
+                          <ExternalLink className="w-3 h-3 opacity-70" />
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

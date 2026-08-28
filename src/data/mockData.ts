@@ -9,8 +9,11 @@ export const COMPANY_INFO = {
   location: 'Doha, State of Qatar',
   warehouseLocation: 'Industrial Area, Street 24, Building 88, Doha',
   currency: 'QAR',
+  staffOrderQuota: 200, // QAR 200 one-time staff order quota
   supportHours: 'Sun - Thu: 7:30 AM - 4:30 PM',
 };
+
+export const STAFF_ORDER_QUOTA = 200; // QAR 200 one-time staff quota limit
 
 export const DEPARTMENTS: Department[] = [
   'Sales & Key Accounts',
@@ -175,7 +178,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     descriptionAr: 'شاي أسود بريطاني فاخر نكهة غنية ١٠٠ كيس.',
     originalPrice: 48.00,
     staffPrice: 24.00,
-    stock: 35,
+    stock: 0,
     unit: 'Box (100 Bags)',
     imageUrl: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
     isStaffSpecial: false,
