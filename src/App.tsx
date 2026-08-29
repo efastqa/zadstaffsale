@@ -10,7 +10,8 @@ import {
   getStoredEmployee, 
   saveStoredEmployee,
   getStoredAdminAuth,
-  saveStoredAdminAuth
+  saveStoredAdminAuth,
+  saveStoredMyOrderNumber
 } from './utils/storage';
 import { 
   subscribeToProducts, 
@@ -271,6 +272,7 @@ export default function App() {
   };
 
   const handleOrderPlaced = async (newOrder: Order) => {
+    saveStoredMyOrderNumber(newOrder.orderNumber);
     setOrders((prev) => [newOrder, ...prev]);
     setNewOrderAlert(newOrder);
     try {
@@ -889,6 +891,7 @@ export default function App() {
           setTrackingOrderNumber('');
         }}
         orders={orders}
+        currentEmployee={employeeProfile}
         initialOrderNumber={trackingOrderNumber}
         onPrintOrder={handleTriggerPrintOrder}
       />

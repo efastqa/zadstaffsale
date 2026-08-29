@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { Order, OrderStatus } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Order, OrderStatus, EmployeeProfile } from '../types';
 import { COMPANY_INFO } from '../data/mockData';
+import { 
+  getStoredMyOrderNumbers, 
+  saveStoredMyOrderNumber, 
+  cleanPhoneNumber, 
+  isOrderOwnedByEmployee 
+} from '../utils/storage';
 import { 
   X, 
   Search, 
@@ -10,18 +16,20 @@ import {
   Truck, 
   MapPin, 
   MessageCircle, 
-  Barcode, 
   Printer, 
   Building,
   User,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  ShoppingBag
 } from 'lucide-react';
 
 interface OrderTrackingModalProps {
   isOpen: boolean;
   onClose: () => void;
   orders: Order[];
+  currentEmployee?: EmployeeProfile;
   initialOrderNumber?: string;
   onPrintOrder: (order: Order) => void;
 }
@@ -30,36 +38,95 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   isOpen,
   onClose,
   orders,
+  currentEmployee,
   initialOrderNumber = '',
   onPrintOrder,
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialOrderNumber);
-  const [activeOrder, setActiveOrder] = useState<Order | null>(() => {
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [storedOrderNumbers, setStoredOrderNumbers] = useState<string[]>(getStoredMyOrderNumbers);
+
+  // Filter orders that strictly belong to the current employee
+  const myOrders = useMemo(() => {
+    return orders.filter((o) => 
+      isOrderOwnedByEmployee(o, currentEmployee, storedOrderNumbers)
+    );
+  }, [orders, currentEmployee, storedOrderNumbers]);
+
+  // Determine active order
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+
+  // Sync state when modal opens or initial order changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Refresh stored order numbers from local storage
+    const latestStored = getStoredMyOrderNumbers();
+    setStoredOrderNumbers(latestStored);
+    setSearchError(null);
+
     if (initialOrderNumber) {
-      return orders.find(
+      const match = orders.find(
         (o) => o.orderNumber.toLowerCase() === initialOrderNumber.toLowerCase()
-      ) || null;
+      );
+      if (match) {
+        setActiveOrder(match);
+        setSearchQuery(match.orderNumber);
+        return;
+      }
     }
-    return orders[0] || null;
-  });
+
+    // Default to the employee's own most recent order, or null if none exist
+    const userOrders = orders.filter((o) => 
+      isOrderOwnedByEmployee(o, currentEmployee, latestStored)
+    );
+
+    if (userOrders.length > 0) {
+      setActiveOrder(userOrders[0]);
+      setSearchQuery(userOrders[0].orderNumber);
+    } else {
+      setActiveOrder(null);
+      setSearchQuery('');
+    }
+  }, [isOpen, initialOrderNumber, orders, currentEmployee]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchError(null);
     const query = searchQuery.trim().toLowerCase();
     if (!query) return;
 
-    const found = orders.find(
-      (o) =>
-        o.orderNumber.toLowerCase().includes(query) ||
-        o.employeeId.toLowerCase().includes(query) ||
-        o.employeePhone.toLowerCase().includes(query) ||
-        o.employeeName.toLowerCase().includes(query)
-    );
+    const queryDigits = cleanPhoneNumber(query);
+
+    // Search specifically in the system
+    const found = orders.find((o) => {
+      // Match by exact or partial order number (e.g. "5403" or "ZAD-5403")
+      if (o.orderNumber.toLowerCase() === query || o.orderNumber.toLowerCase().includes(query)) {
+        return true;
+      }
+      // Match by phone number
+      if (queryDigits.length >= 7) {
+        const orderPhoneDigits = cleanPhoneNumber(o.employeePhone);
+        if (orderPhoneDigits.includes(queryDigits) || queryDigits.includes(orderPhoneDigits)) {
+          return true;
+        }
+      }
+      // Match by exact Staff ID
+      if (o.employeeId.toLowerCase() === query) {
+        return true;
+      }
+      return false;
+    });
 
     if (found) {
       setActiveOrder(found);
+      saveStoredMyOrderNumber(found.orderNumber);
+      setStoredOrderNumbers(getStoredMyOrderNumbers());
+      setSearchError(null);
     } else {
-      alert(`No order found matching "${searchQuery}". Please check your order ID or Staff ID.`);
+      setSearchError(
+        `No order found matching "${searchQuery}". Please check your Order Number (e.g. ZAD-5403) or Phone Number.`
+      );
     }
   };
 
@@ -85,16 +152,21 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
+        {/* Header with Privacy Indicator */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-slate-200">
-              <Truck className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">Staff Order Live Tracking</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-white">Staff Order Live Tracking</h3>
+                <span className="text-[10px] bg-white/10 text-slate-300 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium border border-white/10">
+                  <Lock className="w-2.5 h-2.5 text-emerald-400" /> Private View
+                </span>
+              </div>
               <p className="text-[11px] text-slate-300">
-                Real-time delivery progress & department distribution pass
+                Track your personal orders and department delivery progress
               </p>
             </div>
           </div>
@@ -107,53 +179,98 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-6 overflow-y-auto space-y-5">
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Order # (e.g. ZAD-8041), Staff ID, or Name"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"
-              />
+          <form onSubmit={handleSearch} className="space-y-2">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (searchError) setSearchError(null);
+                  }}
+                  placeholder="Enter your Order # (e.g. ZAD-5403) or Phone number"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-full text-xs transition-colors shadow-xs"
+              >
+                Track
+              </button>
             </div>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-full text-xs transition-colors shadow-xs"
-            >
-              Track Order
-            </button>
+
+            {searchError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{searchError}</span>
+              </div>
+            )}
           </form>
 
-          {/* Quick Select from existing orders */}
-          {orders.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-              <span className="text-slate-400 font-medium flex-shrink-0">Recent:</span>
-              {orders.slice(0, 5).map((o) => (
-                <button
-                  key={o.id}
-                  onClick={() => {
-                    setActiveOrder(o);
-                    setSearchQuery(o.orderNumber);
-                  }}
-                  className={`px-3 py-1 rounded-full border font-mono text-[11px] transition-all flex-shrink-0 ${
-                    activeOrder?.id === o.id
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  #{o.orderNumber} ({o.employeeName.split(' ')[0]})
-                </button>
-              ))}
+          {/* Quick Select: ONLY the logged-in employee's own orders */}
+          {myOrders.length > 0 ? (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-700 font-bold flex items-center gap-1.5">
+                  <ShoppingBag className="w-3.5 h-3.5 text-slate-500" />
+                  My Orders ({myOrders.length})
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {currentEmployee?.name ? `Logged in: ${currentEmployee.name}` : 'Saved on this device'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                {myOrders.map((o) => {
+                  const isActive = activeOrder?.id === o.id;
+                  const isDelivered = o.status === 'delivered';
+                  
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        setActiveOrder(o);
+                        setSearchQuery(o.orderNumber);
+                        setSearchError(null);
+                      }}
+                      className={`px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all flex items-center gap-2 flex-shrink-0 ${
+                        isActive
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                      }`}
+                    >
+                      <span className="font-mono font-bold">#{o.orderNumber}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-semibold ${
+                        isActive 
+                          ? 'bg-white/20 text-white' 
+                          : isDelivered
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {o.status.replace(/_/g, ' ')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-2.5 text-xs text-slate-500">
+              <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>
+                <strong>Private Tracking:</strong> Only orders linked to your phone number or placed from this browser will appear here.
+              </span>
             </div>
           )}
 
           {/* Active Order Details */}
           {activeOrder ? (
-            <div className="space-y-6">
+            <div className="space-y-5 animate-in fade-in">
               {/* Order Status Header Card */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <div>
@@ -414,10 +531,16 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-slate-400 space-y-2">
-              <AlertCircle className="w-10 h-10 mx-auto text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">No order selected</p>
-              <p className="text-xs">Enter your Order Number above to track progress.</p>
+            <div className="text-center py-10 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-200/60 flex items-center justify-center mx-auto text-slate-400">
+                <Search className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-slate-800">Track Your Order</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Enter your <strong>Order Number</strong> (e.g. <span className="font-mono text-slate-700">ZAD-5403</span>) or your <strong>WhatsApp Phone Number</strong> in the box above to check live delivery progress.
+                </p>
+              </div>
             </div>
           )}
         </div>

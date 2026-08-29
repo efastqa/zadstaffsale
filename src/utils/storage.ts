@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   LANGUAGE: 'zad_staff_language_v1',
   ADMIN_PASSWORD: 'zad_admin_password_v1',
   ADMIN_AUTH: 'zad_admin_auth_v1',
+  MY_ORDERS: 'zad_staff_my_orders_v1',
 };
 
 const DEFAULT_ADMIN_PASSWORD = 'zad2025';
@@ -141,3 +142,64 @@ export function saveStoredEmployee(emp: EmployeeProfile) {
     console.error('Error saving employee profile', e);
   }
 }
+
+export function getStoredMyOrderNumbers(): string[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.MY_ORDERS);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error reading my orders from storage', e);
+  }
+  return [];
+}
+
+export function saveStoredMyOrderNumber(orderNumber: string) {
+  try {
+    const existing = getStoredMyOrderNumbers();
+    if (!existing.includes(orderNumber)) {
+      const updated = [orderNumber, ...existing];
+      localStorage.setItem(STORAGE_KEYS.MY_ORDERS, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error('Error saving my order number', e);
+  }
+}
+
+export function cleanPhoneNumber(phone?: string): string {
+  if (!phone) return '';
+  return phone.replace(/[^0-9]/g, '').slice(-8); // extract last 8 digits for Qatar
+}
+
+export function isOrderOwnedByEmployee(
+  order: Order,
+  profile?: Partial<EmployeeProfile> | null,
+  myOrderNumbers?: string[]
+): boolean {
+  if (!order) return false;
+
+  // 1. Direct match with order numbers placed from this device/browser
+  if (myOrderNumbers && myOrderNumbers.includes(order.orderNumber)) {
+    return true;
+  }
+
+  // 2. Match by clean phone number
+  if (profile?.phone) {
+    const profilePhoneClean = cleanPhoneNumber(profile.phone);
+    const orderPhoneClean = cleanPhoneNumber(order.employeePhone);
+    if (profilePhoneClean.length >= 7 && profilePhoneClean === orderPhoneClean) {
+      return true;
+    }
+  }
+
+  // 3. Match by Staff ID
+  if (profile?.id && profile.id.trim().length >= 3) {
+    if (order.employeeId && order.employeeId.trim().toLowerCase() === profile.id.trim().toLowerCase()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+

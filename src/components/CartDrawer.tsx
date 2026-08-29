@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { CartItem, Department, DeliveryMode, Order, EmployeeProfile } from '../types';
 import { DEPARTMENTS, COMPANY_INFO, STAFF_ORDER_QUOTA } from '../data/mockData';
 import { createWhatsAppOrderLink } from '../utils/whatsapp';
+import { saveStoredMyOrderNumber } from '../utils/storage';
 import { 
   X, 
   Trash2, 
@@ -139,6 +140,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       whatsappMessageSent: true,
     };
 
+    saveStoredMyOrderNumber(orderNumber);
     onOrderPlaced(newOrder);
     setPlacedOrder(newOrder);
     onClearCart();
