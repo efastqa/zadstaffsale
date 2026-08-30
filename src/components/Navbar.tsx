@@ -144,68 +144,91 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 hidden sm:block" />
             </button>
 
-            {/* Cart Drawer Trigger Button */}
+            {/* Cart Drawer Trigger Button - Always visible on all mobile and desktop screens */}
             <button
               onClick={onOpenCart}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-xs transition-all shadow-xs active:scale-98 ${
+              className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full font-bold text-xs transition-all shadow-xs active:scale-95 shrink-0 ${
                 cartSubtotal > 200
                   ? 'bg-rose-700 hover:bg-rose-800 text-white'
                   : 'bg-slate-900 hover:bg-slate-800 text-white'
               }`}
+              title="Open Staff Cart & Checkout"
             >
               <div className="relative">
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 text-amber-400" />
                 {totalCartCount > 0 && (
-                  <span className={`absolute -top-2 -right-2.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center border border-white ${
+                  <span className={`absolute -top-2.5 -right-2.5 min-w-4 h-4 px-1 rounded-full text-white text-[9px] font-black flex items-center justify-center border border-white ${
                     cartSubtotal > 200 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-500 text-white'
                   }`}>
                     {totalCartCount}
                   </span>
                 )}
               </div>
-              <span className="hidden sm:inline font-mono">
-                {totalCartCount > 0
-                  ? `QAR ${cartSubtotal.toFixed(2)}`
-                  : 'Cart'}
+              <span className="font-bold text-xs tracking-tight">
+                Cart
               </span>
+              {totalCartCount > 0 && (
+                <span className="hidden xs:inline sm:inline text-[11px] font-mono opacity-90 border-l border-slate-700 pl-1.5 ml-0.5">
+                  {cartSubtotal.toFixed(0)} QAR
+                </span>
+              )}
             </button>
           </div>
         </div>
 
-        {/* Mobile View Switcher - Store, Track Delivery, Admin Portal */}
-        <div className="md:hidden grid grid-cols-3 gap-1.5 py-2 border-t border-slate-100 text-xs">
+        {/* Mobile View Switcher - Store, Cart, Track Delivery, Admin Portal (Visible on ALL Mobiles) */}
+        <div className="md:hidden grid grid-cols-4 gap-1 py-1.5 px-1 border-t border-slate-100 text-xs">
           <button
             onClick={() => onSelectView('store')}
-            className={`font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] ${
+            className={`font-bold py-2 px-1.5 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] ${
               activeView === 'store'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
             }`}
           >
             <Store className="w-3.5 h-3.5" />
-            Store
+            <span>Store</span>
           </button>
+
+          <button
+            onClick={onOpenCart}
+            className={`font-bold py-2 px-1.5 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] relative ${
+              totalCartCount > 0
+                ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Cart</span>
+            {totalCartCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-white text-[9px] font-black">
+                {totalCartCount}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => onSelectView('tracking')}
-            className={`font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] ${
+            className={`font-bold py-2 px-1.5 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] ${
               activeView === 'tracking'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
             }`}
           >
             <Truck className="w-3.5 h-3.5" />
-            Track
+            <span>Track</span>
           </button>
+
           <button
             onClick={() => onSelectView('admin')}
-            className={`font-bold py-2 px-2 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] relative ${
+            className={`font-bold py-2 px-1.5 rounded-xl transition-colors flex items-center justify-center gap-1 text-[11px] relative ${
               activeView === 'admin'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            Admin
+            <span>Admin</span>
             {pendingOrdersCount > 0 && (
               <span className="w-2 h-2 rounded-full bg-amber-400"></span>
             )}

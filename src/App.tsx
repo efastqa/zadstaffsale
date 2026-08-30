@@ -843,6 +843,41 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Mobile Sticky Floating Cart Bar (Always clearly visible on all mobile displays when items are in cart) */}
+      {cart.length > 0 && activeView === 'store' && (
+        <div className="md:hidden fixed bottom-4 left-3 right-3 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-2xl p-3 shadow-2xl border border-slate-700/80 flex items-center justify-between transition-all active:scale-98"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="relative w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                <ShoppingBag className="w-5 h-5" />
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-slate-900">
+                  {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                </span>
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-black text-white flex items-center gap-1.5">
+                  <span>Staff Cart</span>
+                  <span className="text-[10px] font-normal text-amber-300">
+                    ({cart.reduce((acc, item) => acc + item.quantity, 0)} {cart.reduce((acc, item) => acc + item.quantity, 0) === 1 ? 'item' : 'items'})
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-300 font-mono font-bold">
+                  Total: QAR {cart.reduce((acc, item) => acc + item.product.staffPrice * item.quantity, 0).toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-xs shrink-0">
+              <span>View Cart</span>
+              <span className="text-sm font-black">→</span>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* MODALS */}
       {/* 0. Admin Password Protection Modal */}
       <AdminPasswordModal
