@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   AlertCircle,
   Lock,
-  ShoppingBag
+  ShoppingBag,
+  CreditCard
 } from 'lucide-react';
 
 interface OrderTrackingModalProps {
@@ -135,9 +136,10 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
       pending_whatsapp: 1,
       confirmed: 2,
       packing: 3,
-      ready_for_dispatch: 4,
-      out_for_delivery: 4,
-      delivered: 5,
+      awaiting_payment: 4,
+      ready_for_dispatch: 5,
+      out_for_delivery: 5,
+      delivered: 6,
       cancelled: 0,
     };
 
@@ -311,10 +313,51 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 </div>
               </div>
 
+              {/* FINANCE PAYMENT ALERT BANNER (Active when order is packed or awaiting payment) */}
+              {(activeOrder.status === 'awaiting_payment' || activeOrder.status === 'packing') && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 space-y-3 animate-in fade-in">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-base shrink-0 shadow-2xs">
+                      💳
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h5 className="font-extrabold text-xs text-amber-950">
+                          Action Required: Settle Payment at Finance Department
+                        </h5>
+                        <span className="px-2 py-0.2 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                          Step 4
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-900 leading-relaxed mt-1">
+                        Your staff order items are picked & packed. Please settle the amount of <strong className="font-mono text-xs">QAR {activeOrder.grandTotal.toFixed(2)}</strong> with the <strong>Finance Department / Cashier</strong>. Once payment is confirmed, we will immediately arrange delivery to your department.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <span className="text-[11px] font-medium text-amber-900 font-arabic">
+                      يرجى سداد المبلغ لدى قسم المالية لتأكيد استلام وتوصيل الطلب
+                    </span>
+                    <a
+                      href={`https://wa.me/${COMPANY_INFO.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                        `Hi ZAD Staff Sales Support, regarding my Staff Order #${activeOrder.orderNumber} (Amount: QAR ${activeOrder.grandTotal.toFixed(2)}):\n\nI have settled the payment at Finance / I am attaching the payment receipt.\nPlease arrange delivery to ${activeOrder.department}. Thank you!`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-2xs transition-colors self-start sm:self-auto"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Confirm Payment on WhatsApp</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Visual Progress Timeline */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
                 <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Live Dispatch Timeline
+                  Live Dispatch & Delivery Timeline
                 </h5>
 
                 <div className="relative">
@@ -336,7 +379,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="text-xs font-bold text-slate-900">
-                          Staff Order Placed & WhatsApp Message Logged
+                          1. Staff Order Placed & WhatsApp Message Logged
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
                           Order queued for verification with ZAD internal sales team.
@@ -359,10 +402,10 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="text-xs font-bold text-slate-900">
-                          Sales Operations Confirmed
+                          2. Sales Operations Confirmed
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Employee verification confirmed. Stock reserved at Industrial Area Warehouse.
+                          Employee quota verified. Stock reserved at Industrial Area Central Warehouse.
                         </div>
                       </div>
                     </div>
@@ -382,38 +425,52 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="text-xs font-bold text-slate-900">
-                          Warehouse Picking & Barcode Verification
+                          3. Warehouse Picking & Barcode Packing
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Items packed into staff sales carton with employee badge tag.
+                          Items picked and packed into staff sales carton with employee badge tag.
                         </div>
                       </div>
                     </div>
 
-                    {/* Step 4 */}
+                    {/* Step 4 - Finance Payment Settlement */}
                     <div className="flex items-start gap-4">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs transition-all ${
                           getStepStatus(activeOrder.status, 4) === 'completed'
                             ? 'bg-emerald-600 text-white'
                             : getStepStatus(activeOrder.status, 4) === 'active'
-                            ? 'bg-slate-900 text-white ring-2 ring-slate-200'
+                            ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-200 animate-pulse'
                             : 'bg-slate-200 text-slate-500'
                         }`}
                       >
-                        <Truck className="w-4 h-4" />
+                        <CreditCard className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
-                        <div className="text-xs font-bold text-slate-900">
-                          Dispatched for Department / Desk Delivery
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900">
+                            4. Finance Payment Settlement (Pay in Finance)
+                          </span>
+                          {getStepStatus(activeOrder.status, 4) === 'completed' && (
+                            <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black">
+                              PAID & CLEARED
+                            </span>
+                          )}
+                          {getStepStatus(activeOrder.status, 4) === 'active' && (
+                            <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-900 text-[9px] font-black">
+                              AWAITING PAYMENT
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          {activeOrder.assignedDispatcher ? (
-                            <span className="font-semibold text-slate-900">
-                              Assigned Dispatcher: {activeOrder.assignedDispatcher}
+                          {getStepStatus(activeOrder.status, 4) === 'completed' ? (
+                            <span className="text-emerald-700 font-semibold">
+                              Payment of QAR {activeOrder.grandTotal.toFixed(2)} verified by Finance Dept. Delivery approved!
                             </span>
                           ) : (
-                            'En route in ZAD internal distribution fleet van.'
+                            <span>
+                              Please pay <strong>QAR {activeOrder.grandTotal.toFixed(2)}</strong> at the Finance Department / Cashier so delivery can be arranged.
+                            </span>
                           )}
                         </div>
                       </div>
@@ -423,8 +480,37 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                     <div className="flex items-start gap-4">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs transition-all ${
-                          getStepStatus(activeOrder.status, 5) === 'completed' ||
-                          getStepStatus(activeOrder.status, 5) === 'active'
+                          getStepStatus(activeOrder.status, 5) === 'completed'
+                            ? 'bg-emerald-600 text-white'
+                            : getStepStatus(activeOrder.status, 5) === 'active'
+                            ? 'bg-slate-900 text-white ring-2 ring-slate-200'
+                            : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <Truck className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-slate-900">
+                          5. Dispatched for Department Delivery
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {activeOrder.assignedDispatcher ? (
+                            <span className="font-semibold text-slate-900">
+                              Assigned Runner: {activeOrder.assignedDispatcher}
+                            </span>
+                          ) : (
+                            'En route in ZAD internal distribution fleet van.'
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 6 */}
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs transition-all ${
+                          getStepStatus(activeOrder.status, 6) === 'completed' ||
+                          getStepStatus(activeOrder.status, 6) === 'active'
                             ? 'bg-emerald-600 text-white ring-2 ring-emerald-100'
                             : 'bg-slate-200 text-slate-500'
                         }`}
@@ -433,12 +519,12 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                       </div>
                       <div className="flex-1">
                         <div className="text-xs font-bold text-slate-900">
-                          Delivered / Handed Over
+                          6. Delivered / Handed Over
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
                           {activeOrder.deliveredAt
                             ? `Delivered on ${new Date(activeOrder.deliveredAt).toLocaleDateString('en-GB')}`
-                            : 'Awaiting final staff sign-off.'}
+                            : 'Awaiting final staff sign-off and handover.'}
                         </div>
                       </div>
                     </div>

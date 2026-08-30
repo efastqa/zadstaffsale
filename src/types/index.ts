@@ -15,6 +15,7 @@ export type OrderStatus =
   | 'pending_whatsapp'
   | 'confirmed'
   | 'packing'
+  | 'awaiting_payment'
   | 'ready_for_dispatch'
   | 'out_for_delivery'
   | 'delivered'
@@ -81,6 +82,8 @@ export interface Order {
   assignedDispatcher?: string;
   batchManifestId?: string;
   deliveredAt?: string;
+  paymentStatus?: 'pending' | 'paid' | 'salary_deduction';
+  paymentSettledAt?: string;
   adminNotes?: string;
 }
 

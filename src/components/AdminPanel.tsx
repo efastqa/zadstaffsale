@@ -3,7 +3,7 @@ import { Order, Product, Department, OrderStatus } from '../types';
 import { DEPARTMENTS, COMPANY_INFO } from '../data/mockData';
 import { FMCG_PRESETS, CURATED_IMAGES, generateEAN13Barcode } from '../data/fmcgPresets';
 import { getStoredAdminPassword, saveStoredAdminPassword, saveStoredProducts } from '../utils/storage';
-import { createSingleProductWhatsAppLink } from '../utils/whatsapp';
+import { createSingleProductWhatsAppLink, createPaymentRequestWhatsAppLink } from '../utils/whatsapp';
 import { BulkProductModal } from './BulkProductModal';
 import { EBSExportModal } from './EBSExportModal';
 import { AdminSummaryDashboard } from './AdminSummaryDashboard';
@@ -25,6 +25,7 @@ import {
   MessageCircle, 
   ExternalLink,
   DollarSign,
+  CreditCard,
   TrendingUp,
   Boxes,
   Barcode,
@@ -700,8 +701,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   className="bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer w-full text-xs"
                 >
                   <option value="all">All Statuses</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="packing">Packing</option>
+                  <option value="confirmed">Confirmed (Pending Packing)</option>
+                  <option value="packing">Packing Items</option>
+                  <option value="awaiting_payment">Awaiting Finance Payment</option>
                   <option value="ready_for_dispatch">Ready for Dispatch</option>
                   <option value="out_for_delivery">Out for Delivery</option>
                   <option value="delivered">Delivered</option>
@@ -831,11 +833,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         </div>
                       )}
 
-                      {/* Status Dropdown */}
-                      <div className="pt-1">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                          Update Fulfillment Status
-                        </label>
+                      {/* Status Dropdown & 1-Click WhatsApp Payment Request */}
+                      <div className="pt-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                            Fulfillment Status
+                          </label>
+                          {order.status === 'awaiting_payment' && (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CreditCard className="w-3 h-3" /> Awaiting Finance
+                            </span>
+                          )}
+                        </div>
+
                         <select
                           value={order.status}
                           onChange={(e) =>
@@ -848,20 +858,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               ? 'bg-blue-50 text-blue-800 border-blue-300'
                               : order.status === 'ready_for_dispatch'
                               ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                              : order.status === 'awaiting_payment'
+                              ? 'bg-amber-100 text-amber-900 border-amber-400 ring-2 ring-amber-200'
                               : order.status === 'packing'
                               ? 'bg-amber-50 text-amber-800 border-amber-300'
                               : 'bg-white text-slate-700 border-slate-300'
                           }`}
                         >
                           <option value="confirmed">Confirmed (Pending Packing)</option>
-                          <option value="packing">Packing Items</option>
-                          <option value="ready_for_dispatch">Ready for Dispatch</option>
-                          <option value="out_for_delivery">Out for Delivery</option>
+                          <option value="packing">Warehouse Packing Items</option>
+                          <option value="awaiting_payment">Awaiting Finance Payment (Pay in Finance)</option>
+                          <option value="ready_for_dispatch">Finance Cleared / Ready for Dispatch</option>
+                          <option value="out_for_delivery">Out for Delivery (In Van)</option>
                           <option value="delivered">Delivered to Employee</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
+
+                        {/* 1-Click WhatsApp Direct Payment Request */}
+                        <a
+                          href={createPaymentRequestWhatsAppLink(order)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs shadow-xs transition-all active:scale-98 ${
+                            order.status === 'awaiting_payment' || order.status === 'packing'
+                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-200'
+                              : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300'
+                          }`}
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                          <span>📲 1-Click WhatsApp Payment Request</span>
+                        </a>
+
                         {order.assignedDispatcher && (
-                          <div className="text-[10px] text-slate-500 font-medium mt-1">
+                          <div className="text-[10px] text-slate-500 font-medium">
                             Assigned Runner: {order.assignedDispatcher}
                           </div>
                         )}
@@ -895,6 +924,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             {(order.status === 'confirmed' || order.status === 'pending_whatsapp') && (
                               <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-emerald-500 text-slate-950 rounded-full animate-pulse">
                                 NEW
+                              </span>
+                            )}
+                            {order.status === 'awaiting_payment' && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 rounded-full">
+                                Awaiting Pay
                               </span>
                             )}
                           </div>
@@ -962,6 +996,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   ? 'bg-blue-50 text-blue-800 border-blue-300'
                                   : order.status === 'ready_for_dispatch'
                                   ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                                  : order.status === 'awaiting_payment'
+                                  ? 'bg-amber-100 text-amber-900 border-amber-400 font-black'
                                   : order.status === 'packing'
                                   ? 'bg-amber-50 text-amber-800 border-amber-300'
                                   : 'bg-slate-100 text-slate-700 border-slate-300'
@@ -969,6 +1005,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             >
                               <option value="confirmed">Confirmed</option>
                               <option value="packing">Packing</option>
+                              <option value="awaiting_payment">Awaiting Finance Pay</option>
                               <option value="ready_for_dispatch">Ready for Dispatch</option>
                               <option value="out_for_delivery">Out for Delivery</option>
                               <option value="delivered">Delivered</option>
@@ -983,10 +1020,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </div>
                         </td>
 
-                        <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
+                        <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                          {/* 1-Click WhatsApp Payment Request */}
+                          <a
+                            href={createPaymentRequestWhatsAppLink(order)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors shadow-2xs"
+                            title="Send WhatsApp payment request to employee"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Request Pay</span>
+                          </a>
+
                           <button
                             onClick={() => onPrintOrder(order)}
-                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
                             title="Print Slip"
                           >
                             <Printer className="w-4 h-4" />

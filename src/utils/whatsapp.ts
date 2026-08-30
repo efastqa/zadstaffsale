@@ -96,6 +96,44 @@ Please confirm stock availability & delivery arrangement. Thank you!`;
 }
 
 /**
+ * Generates 1-click Finance Payment Request WhatsApp link to send to Employee
+ */
+export function createPaymentRequestWhatsAppLink(order: Order, baseUrl?: string): string {
+  const appUrl = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  const trackUrl = `${appUrl}?track=${order.orderNumber}`;
+
+  const itemsSummary = order.items.map((i) => `${i.quantity}x ${i.productName}`).join(', ');
+
+  const message = `💳 *ZAD MARKETING & DISTRIBUTION - FINANCE PAYMENT REQUEST*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dear *${order.employeeName}* (Staff ID: \`${order.employeeId}\`),
+
+📦 Your Staff Order *#${order.orderNumber}* has been picked and packed!
+
+💰 *Amount Due: QAR ${order.grandTotal.toFixed(2)}*
+🛍️ Items: ${order.items.reduce((s, i) => s + i.quantity, 0)} units (${itemsSummary})
+🏢 Department: *${order.department}*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+👉 *ACTION REQUIRED:*
+Please pay the amount of *QAR ${order.grandTotal.toFixed(2)}* at the **Finance Department / Cashier**.
+
+Once payment is confirmed, please reply to this WhatsApp message so we can immediately arrange delivery to your department.
+
+🔗 *View Order Slip & Live Status:*
+${trackUrl}
+
+Thank you,
+*ZAD Sales Operations & Warehouse Team*`;
+
+  let phone = order.employeePhone ? order.employeePhone.replace(/[^0-9]/g, '') : '';
+  if (phone.length === 8) {
+    phone = `974${phone}`;
+  }
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
  * Generates notification message from Admin to Employee on dispatch
  */
 export function generateDispatchWhatsAppNotification(order: Order): string {
