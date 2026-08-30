@@ -327,49 +327,52 @@ export const AdminSummaryDashboard: React.FC<AdminSummaryDashboardProps> = ({
             </p>
           </div>
 
-          {/* Timeframe Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl shrink-0 self-start md:self-auto">
-            <Calendar className="w-4 h-4 text-slate-400 ml-2" />
-            <button
-              onClick={() => setTimeframe('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                timeframe === 'all'
-                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              All Time
-            </button>
-            <button
-              onClick={() => setTimeframe('this_month')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                timeframe === 'this_month'
-                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              Aug 2026
-            </button>
-            <button
-              onClick={() => setTimeframe('last_month')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                timeframe === 'last_month'
-                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              Jul 2026
-            </button>
-            <button
-              onClick={() => setTimeframe('last_30_days')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                timeframe === 'last_30_days'
-                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              Last 30D
-            </button>
+          {/* Action Buttons & Timeframe Selector */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            {/* Timeframe Selector */}
+            <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 p-1 rounded-2xl shrink-0">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+              <button
+                onClick={() => setTimeframe('all')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === 'all'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => setTimeframe('this_month')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === 'this_month'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                Aug 2026
+              </button>
+              <button
+                onClick={() => setTimeframe('last_month')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === 'last_month'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                Jul 2026
+              </button>
+              <button
+                onClick={() => setTimeframe('last_30_days')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === 'last_30_days'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                Last 30D
+              </button>
+            </div>
           </div>
         </div>
 
