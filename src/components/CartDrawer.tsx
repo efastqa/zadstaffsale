@@ -673,34 +673,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     </div>
                   )}
 
-                  {/* WhatsApp Order Button */}
-                  <button
-                    onClick={() => handleCheckout(false)}
-                    disabled={isSubmitting || isQuotaExceeded || hasSoldOutItems}
-                    className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-white font-semibold rounded-full shadow-xs transition-all text-xs ${
-                      isQuotaExceeded || hasSoldOutItems
-                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                        : 'bg-emerald-600 hover:bg-emerald-500 active:scale-98'
-                    }`}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {isQuotaExceeded 
-                      ? `Exceeds QAR ${MAX_EMPLOYEE_QUOTA} Staff Quota` 
-                      : hasSoldOutItems
-                      ? 'Remove Sold Out Items'
-                      : `Place Order via WhatsApp (${COMPANY_INFO.whatsappDisplay})`}
-                  </button>
-
+                  {/* Top Button: Register in Admin System Only */}
                   <button
                     onClick={() => handleCheckout(true)}
                     disabled={isSubmitting || isQuotaExceeded || hasSoldOutItems}
-                    className={`w-full py-2 text-xs font-medium rounded-full transition-colors border border-dashed ${
+                    className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-white font-bold rounded-full shadow-xs transition-all text-xs ${
                       isQuotaExceeded || hasSoldOutItems
-                        ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                        : 'border-slate-300 text-slate-600 hover:text-slate-900'
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                        : 'bg-slate-900 hover:bg-slate-800 active:scale-98'
                     }`}
                   >
-                    Register in Admin System Only (Without WhatsApp)
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>
+                      {isQuotaExceeded 
+                        ? `Exceeds QAR ${MAX_EMPLOYEE_QUOTA} Staff Quota` 
+                        : hasSoldOutItems
+                        ? 'Remove Sold Out Items'
+                        : isSubmitting
+                        ? 'Registering Order...'
+                        : 'Register in Admin System Only (Without WhatsApp)'}
+                    </span>
+                  </button>
+
+                  {/* Bottom Button: Place Order via WhatsApp */}
+                  <button
+                    onClick={() => handleCheckout(false)}
+                    disabled={isSubmitting || isQuotaExceeded || hasSoldOutItems}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 font-semibold rounded-full shadow-xs transition-all text-xs border ${
+                      isQuotaExceeded || hasSoldOutItems
+                        ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                        : 'border-emerald-600/30 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 active:scale-98'
+                    }`}
+                  >
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Place Order via WhatsApp ({COMPANY_INFO.whatsappDisplay})</span>
                   </button>
                 </div>
               )}

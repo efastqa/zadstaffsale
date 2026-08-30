@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { COMPANY_INFO } from '../data/mockData';
-import { createSingleProductWhatsAppLink } from '../utils/whatsapp';
 import { playAddToCartSound } from '../utils/audio';
 import { 
   Plus, 
   Minus, 
-  MessageCircle, 
   Barcode, 
   Check, 
   Sparkles, 
-  ExternalLink,
   Ban
 } from 'lucide-react';
 
@@ -178,7 +174,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className={`h-8 sm:h-9 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs ${
+                  className={`h-8 sm:h-9 px-4 sm:px-5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs ${
                     justAdded
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-900 hover:bg-slate-800 active:scale-95 text-white'
@@ -190,26 +186,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     </>
                   ) : (
                     <>
-                      <Plus className="w-3.5 h-3.5" /> Add
+                      <Plus className="w-3.5 h-3.5" /> Add to Cart
                     </>
                   )}
                 </button>
-
-                {/* Quick WhatsApp */}
-                <a
-                  href={createSingleProductWhatsAppLink(
-                    product,
-                    employeeName,
-                    employeeId,
-                    department
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-8 sm:h-9 w-8 sm:w-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition-colors shrink-0"
-                  title="1-Click WhatsApp Order"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-600" />
-                </a>
               </>
             )}
           </div>
@@ -391,23 +371,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   )}
                 </button>
               </div>
-
-              {/* Quick WhatsApp 1-Click Order Link */}
-              <a
-                href={createSingleProductWhatsAppLink(
-                  product,
-                  employeeName,
-                  employeeId,
-                  department
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-1.5 flex items-center justify-center gap-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-colors"
-              >
-                <MessageCircle className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span className="truncate">WhatsApp Order</span>
-                <ExternalLink className="w-2.5 h-2.5 opacity-60 shrink-0" />
-              </a>
             </div>
           )}
         </div>
