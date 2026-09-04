@@ -955,6 +955,7 @@ export default function App() {
         onClose={() => setIsPrintModalOpen(false)}
         order={printOrder}
         departmentBatch={printDeptBatch}
+        products={products}
       />
     </div>
   );

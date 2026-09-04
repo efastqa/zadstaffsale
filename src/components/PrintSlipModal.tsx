@@ -1,5 +1,5 @@
 import React from 'react';
-import { Order, Department } from '../types';
+import { Order, Department, Product } from '../types';
 import { COMPANY_INFO } from '../data/mockData';
 import { Logo } from './Logo';
 import { X, Printer, CheckCircle, FileText, Truck } from 'lucide-react';
@@ -12,6 +12,7 @@ interface PrintSlipModalProps {
     department: Department;
     orders: Order[];
   } | null;
+  products?: Product[];
 }
 
 export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
@@ -19,11 +20,39 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
   onClose,
   order,
   departmentBatch,
+  products = [],
 }) => {
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Helper to extract clean Item Code (SKU / EBS item code)
+  const getItemCode = (item: {
+    sku?: string;
+    barcode?: string;
+    productId?: string;
+    productName?: string;
+  }) => {
+    if (item.sku && item.sku.trim() !== '' && item.sku !== 'N/A') {
+      return item.sku;
+    }
+    if (products && products.length > 0) {
+      const match = products.find(
+        (p) =>
+          (item.productId && p.id === item.productId) ||
+          (item.barcode && p.barcode && p.barcode === item.barcode) ||
+          (item.productName && p.name && p.name.trim().toLowerCase() === item.productName.trim().toLowerCase())
+      );
+      if (match?.sku && match.sku.trim() !== '' && match.sku !== 'N/A') {
+        return match.sku;
+      }
+    }
+    if (item.barcode && item.barcode.trim() !== '' && item.barcode !== 'N/A') {
+      return item.barcode;
+    }
+    return item.productId || 'N/A';
   };
 
   return (
@@ -108,7 +137,7 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
                     <th className="border border-slate-300 p-2">Order #</th>
                     <th className="border border-slate-300 p-2">Employee Name & ID</th>
                     <th className="border border-slate-300 p-2">Desk / Notes</th>
-                    <th className="border border-slate-300 p-2">Items Summary</th>
+                    <th className="border border-slate-300 p-2">Items Summary (Item Code, Qty, Desc, Price)</th>
                     <th className="border border-slate-300 p-2 text-right">Total (QAR)</th>
                     <th className="border border-slate-300 p-2 text-center">Receiver Sign</th>
                   </tr>
@@ -129,7 +158,24 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
                         {o.deliveryNotes || 'Main Dept Area'}
                       </td>
                       <td className="border border-slate-300 p-2 text-[11px]">
-                        {o.items.map((i) => `${i.quantity}x ${i.productName}`).join('; ')}
+                        <div className="space-y-1">
+                          {o.items.map((i, iIdx) => {
+                            const code = getItemCode(i);
+                            return (
+                              <div key={iIdx} className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono font-bold text-slate-900 bg-slate-100 px-1 py-0.5 rounded text-[10px]">
+                                  [{code}]
+                                </span>
+                                <span className="font-semibold text-slate-800">
+                                  {i.quantity}x {i.productName}
+                                </span>
+                                <span className="font-mono text-slate-500 text-[10px]">
+                                  @ QAR {i.unitPrice.toFixed(2)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </td>
                       <td className="border border-slate-300 p-2 font-bold text-right font-mono">
                         QAR {o.grandTotal.toFixed(2)}
@@ -210,40 +256,57 @@ export const PrintSlipModal: React.FC<PrintSlipModalProps> = ({
                 </div>
               </div>
 
-              {/* Items Table */}
-              <table className="w-full text-xs text-left border-collapse">
+              {/* Items Table for Oracle EBS Processing & Warehouse Slip */}
+              <table className="w-full text-xs text-left border-collapse border border-slate-200 print:border-slate-300">
                 <thead>
-                  <tr className="bg-slate-900 text-white font-bold">
-                    <th className="p-2.5 rounded-l">Item Description</th>
-                    <th className="p-2.5">Barcode / SKU</th>
-                    <th className="p-2.5 text-center">Qty</th>
-                    <th className="p-2.5 text-right">Regular Price</th>
-                    <th className="p-2.5 text-right">Staff Price</th>
-                    <th className="p-2.5 text-right rounded-r">Total (QAR)</th>
+                  <tr className="bg-slate-900 text-white print:bg-slate-100 print:text-slate-900 font-bold border-b print:border-slate-300">
+                    <th className="p-2.5 rounded-l print:rounded-none w-36">Product Item Code</th>
+                    <th className="p-2.5">Description</th>
+                    <th className="p-2.5 text-center w-16">Qty</th>
+                    <th className="p-2.5 text-right w-28">Price</th>
+                    <th className="p-2.5 text-right rounded-r print:rounded-none w-28">Total (QAR)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {order.items.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2.5 font-bold text-slate-800">
-                        {item.productName}
-                        <span className="block text-[10px] text-slate-500 font-normal">
-                          {item.unit}
-                        </span>
-                      </td>
-                      <td className="p-2.5 font-mono text-slate-600">{item.barcode}</td>
-                      <td className="p-2.5 text-center font-bold">{item.quantity}</td>
-                      <td className="p-2.5 text-right text-slate-400 line-through font-mono">
-                        QAR {(item.regularPrice * item.quantity).toFixed(2)}
-                      </td>
-                      <td className="p-2.5 text-right text-blue-900 font-bold font-mono">
-                        QAR {item.unitPrice.toFixed(2)}
-                      </td>
-                      <td className="p-2.5 text-right font-extrabold text-slate-900 font-mono">
-                        QAR {item.totalPrice.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-200 print:divide-slate-300">
+                  {order.items.map((item, idx) => {
+                    const itemCode = getItemCode(item);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-2.5 align-top">
+                          <div className="font-mono font-bold text-slate-900 text-xs">
+                            {itemCode}
+                          </div>
+                          {item.barcode && item.barcode !== itemCode && (
+                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                              Barcode: {item.barcode}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2.5 align-top">
+                          <div className="font-bold text-slate-800 text-xs">{item.productName}</div>
+                          <div className="text-[10px] text-slate-500 font-normal">
+                            Unit: {item.unit || 'pcs'}
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-center font-black text-sm text-slate-900 font-mono align-top">
+                          {item.quantity}
+                        </td>
+                        <td className="p-2.5 text-right align-top font-mono">
+                          <div className="font-bold text-blue-900 print:text-black">
+                            QAR {item.unitPrice.toFixed(2)}
+                          </div>
+                          {item.regularPrice > item.unitPrice && (
+                            <div className="text-[10px] text-slate-400 line-through">
+                              Reg: QAR {item.regularPrice.toFixed(2)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-right font-extrabold text-slate-900 font-mono align-top">
+                          QAR {item.totalPrice.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
 

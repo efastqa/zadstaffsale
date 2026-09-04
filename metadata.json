@@ -1,6 +1,6 @@
 {
-  "name": "ZAD Marketing Staff Sales Portal",
-  "description": "Exclusive staff sales portal with WhatsApp ordering, barcode scanning, order tracking, and department delivery management for ZAD Marketing & Distribution.",
+  "name": "ZAD Staff Sale | ZAD Marketing & Distribution Staff Sales Portal (zadstaffsale.store)",
+  "description": "Official ZAD Staff Sales Portal (zadstaffsale.store) for ZAD Marketing & Distribution employees in Qatar. Browse subsidized FMCG products, chocolates, beverages, dairy, and place internal staff orders.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

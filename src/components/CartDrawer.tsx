@@ -123,7 +123,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       items: cart.map((item) => ({
         productId: item.product.id,
         productName: item.product.name,
-        sku: item.product.sku,
+        sku: item.product.sku || item.product.barcode || 'N/A',
         barcode: item.product.barcode,
         quantity: item.quantity,
         unitPrice: item.product.staffPrice,
